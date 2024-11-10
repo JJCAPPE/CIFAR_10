@@ -18,7 +18,6 @@ images = batch1[b"data"]
 labels = batch1[b"labels"]
 labels = np.array(labels).astype(np.int32)
 
-# Reshape images to (number of samples, 32, 32, 3)
 images = images.reshape(-1, 32, 32, 3).astype(np.float32) / 255.0  # Normalize after reshaping
 
 
@@ -27,7 +26,6 @@ def generate_architecture():
     model = models.Sequential()
     model.add(layers.InputLayer(shape=(32, 32, 3)))
 
-    # Track current spatial dimensions
     current_size = 32
     architecture_details = {
         "num_layers": num_layers,
@@ -68,7 +66,6 @@ def nas(images, labels, num_candidates=10):
         model, architecture_details = generate_architecture()
         val_accuracy = train_and_evaluate(model, images, labels)
         
-        # Store architecture details and accuracy
         architecture_details["accuracy"] = val_accuracy
         results.append(architecture_details)
         
@@ -79,14 +76,14 @@ def nas(images, labels, num_candidates=10):
     
     print(f"Best model accuracy: {best_accuracy:.4f}")
     
-    # Display results in a table
     results_df = pd.DataFrame(results)
     results_df.to_csv("results.csv", mode='a', header=False, index=True)  # Append without headers
     print(results_df)
     
     return best_model
 
-# Load all batches and combine them
+#bestmodel = nas(images, labels)
+
 images, labels = [], []
 for i in range(1, 6):  # CIFAR-10 has 5 data batches
     batch = unpickle(f"data_batch_{i}")
@@ -94,11 +91,9 @@ for i in range(1, 6):  # CIFAR-10 has 5 data batches
     labels.extend(batch[b"labels"])
     print(f"Batch {i} loaded.")
 
-# Convert lists to numpy arrays and preprocess
 images = np.vstack(images).reshape(-1, 32, 32, 3).astype(np.float32) / 255.0
 labels = np.array(labels).astype(np.int32)
 
-# Define train and evaluate function for each batch
 def train_and_evaluate(model, images, labels, epochs=5):
     model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
     split_index = int(0.8 * len(images))
@@ -110,12 +105,10 @@ def train_and_evaluate(model, images, labels, epochs=5):
 
 # Training best model 
 
-# Step 1: Read CSV file to find the best model
-df = pd.read_csv("results.csv")  # Replace with the actual path to your CSV file
+df = pd.read_csv("results.csv")  
 best_model_row = df.loc[df["accuracy"].idxmax()]
-best_layers = eval(best_model_row["layers"])  # Convert string representation to a Python list
+best_layers = eval(best_model_row["layers"])  
 
-# Step 2: Function to recreate the model from saved configuration
 def create_model_from_architecture(layers_config):
     model = models.Sequential()
     model.add(layers.InputLayer(shape=(32, 32, 3)))  # CIFAR-10 input shape
@@ -132,15 +125,11 @@ def create_model_from_architecture(layers_config):
     
     return model
 
-# Create the model with the best architecture
 model = create_model_from_architecture(best_layers)
 
-# Step 3: Set up the model for extensive training
 model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
 
-# Train the model extensively on combined batches
 epochs = 50  # Set higher epochs for extensive training
 history = model.fit(images, labels, epochs=epochs, batch_size=64, validation_split=0.2, verbose=1)
 
-# Optional: Save the trained model
 model.save("best_cifar10_model.h5")
